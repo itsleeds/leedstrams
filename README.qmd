@@ -1,0 +1,22 @@
+---
+format: gfm
+---
+
+
+## Proprocessing
+
+- Download the town map dataset from Scottish Library: https://maps.nls.uk/os/townplans-england/leeds2.html
+- Digitise the tramway centerlines from there
+- Digitise the tram network from Alex's image data
+- Combine both datasets into a single tramway network
+- Bonus: track lines
+- Comparing with OSM
+
+
+Paper in Nature Scientific Data or similar?
+
+
+## Research
+
+- Compare with historic economic and usage data
+- ...
