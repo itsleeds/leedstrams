@@ -1,0 +1,16 @@
+{
+	"name": "Python Image Processing",
+	"image": "mcr.microsoft.com/devcontainers/python:3.10",
+	"features": {
+		"ghcr.io/devcontainers/features/common-utils:2": {}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"ms-toolsai.jupyter"
+			]
+		}
+	},
+	"postCreateCommand": "pip install opencv-python-headless scikit-image shapely geopandas matplotlib ipykernel"
+}

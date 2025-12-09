@@ -27,6 +27,12 @@ leeds_boundary = zonebuilder::zb_zone("Leeds", n_circles = 1)
 -   Bonus: track lines
 -   Comparing with OSM
 
+### Rail Map online data
+
+![](images/paste-2.png)
+
+See png-to-geojson.py
+
 ### Town plan data
 
 Individuals tiles can be accessed from URLs such as https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/19/259898/168840.png
@@ -172,6 +178,77 @@ tiles = read_tiles(
 )
 ```
 
+### Extracting tram network from image
+
+The following Python code processes the image `images/paste-2.png` to extract the Leeds tram network lines (purple), skeletonizes them, and converts the result to LineStrings.
+
+```{python}
+#| label: extract-tram-network
+#| eval: false
+import cv2
+import numpy as np
+from skimage.morphology import skeletonize
+from shapely.geometry import LineString
+import geopandas as gpd
+import matplotlib.pyplot as plt
+
+# Load the image
+image_path = 'images/paste-2.png'
+img = cv2.imread(image_path)
+
+if img is not None:
+    # Convert to HSV color space
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+    # Define color range for the Leeds tram network (purple/blue lines)
+    # Note: These values are approximate and may need tuning based on the specific image
+    # HSV range: Hue [0, 179], Saturation [0, 255], Value [0, 255]
+    # Purple is roughly around 130-160 in OpenCV's Hue scale
+    lower_purple = np.array([120, 50, 50])
+    upper_purple = np.array([170, 255, 255])
+
+    # Create a mask
+    mask = cv2.inRange(hsv, lower_purple, upper_purple)
+
+    # Skeletonize the mask (requires boolean input)
+    # We divide by 255 to get 0/1 values
+    skeleton = skeletonize(mask // 255)
+
+    # Convert skeleton to vector representation (LineStrings)
+    # This is a simplified approach using contours
+    contours, _ = cv2.findContours(skeleton.astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
+    lines = []
+    for cnt in contours:
+        # Contours are arrays of points (x, y)
+        # We need at least 2 points to form a LineString
+        if len(cnt) >= 2:
+            points = cnt.squeeze().tolist()
+            # Handle case where squeeze results in 1D array if only 1 point (though len check handles most)
+            if isinstance(points, list) and len(points) >= 2 and isinstance(points[0], list):
+                 lines.append(LineString(points))
+            elif isinstance(points, list) and len(points) >= 2 and isinstance(points[0], (int, float)):
+                 # Case with 2 points, squeeze might return list of lists or flat list depending on shape
+                 # cnt shape is (N, 1, 2). squeeze -> (N, 2).
+                 # If N=2, squeeze -> (2, 2).
+                 lines.append(LineString(points))
+
+    # Create a GeoDataFrame
+    gdf = gpd.GeoDataFrame(geometry=lines)
+
+    # Plotting for verification
+    fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+    ax[0].imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    ax[0].set_title('Original Image')
+    ax[1].imshow(skeleton, cmap='gray')
+    ax[1].set_title('Skeletonized Network')
+    plt.show()
+
+    # Save to file (optional)
+    # gdf.to_file("leeds_tram_skeleton.geojson", driver="GeoJSON")
+else:
+    print(f"Image not found at {image_path}")
+```
 
 ## Research
 
