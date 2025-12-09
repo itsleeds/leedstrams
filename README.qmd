@@ -1,8 +1,22 @@
 ---
 format: gfm
+execute: 
+  echo: false
 ---
 
 ## Proprocessing
+
+```{r}
+library(tidyverse)
+library(sf)
+zones = pct::get_pct_zones("west-yorkshire")
+zones_leeds = zones |> 
+  filter(lad_name == "Leeds")
+leeds_boundary_lad = st_union(zones_leeds)
+leeds_boundary = leeds_boundary_lad
+# For testing:
+leeds_boundary = zonebuilder::zb_zone("Leeds", n_circles = 1)
+```
 
 ### Plan
 
@@ -19,11 +33,145 @@ Individuals tiles can be accessed from URLs such as https://mapseries-tilesets.s
 
 This is raster 'tile pyramids' - zoom level 19, tile coordinates 259898, 168840.
 
+<!-- We can import this image: -->
+
+```{r}
+#| eval: false
+u = "https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/19/259898/168840.png"
+img = magick::image_read(u)
+# # A tibble: 1 × 7
+#   format width height colorspace matte filesize density
+#   <chr>  <int>  <int> <chr>      <lgl>    <int> <chr>
+# 1 PNG      256    256 sRGB       FALSE    54128 72x72
+img_terra = terra::rast(u)
+# Calculate extent based on XYZ tile coordinates (Web Mercator)
+z <- 19
+x <- 259898
+y <- 168840
+max_ext <- 20037508.34
+tile_size <- (2 * max_ext) / (2^z)
+
+xmin <- -max_ext + (x * tile_size)
+xmax <- -max_ext + ((x + 1) * tile_size)
+ymax <- max_ext - (y * tile_size)
+ymin <- max_ext - ((y + 1) * tile_size)
+
+terra::ext(img_terra) <- c(xmin, xmax, ymin, ymax)
+terra::crs(img_terra) <- "EPSG:3857"
+terra::plotRGB(img_terra)
+mapview::mapview(img_terra)
+
+# Create a lapply to import all tiles in the Leeds area:
+x_extent = st_transform(leeds_boundary, 3857) |> st_bbox()
+x_min_tile = floor((x_extent$xmin + max_ext) / tile_size) 
+x_max_tile = ceiling((x_extent$xmax + max_ext) / tile_size)
+y_min_tile = floor((max_ext - x_extent$ymax) / tile_size)
+y_max_tile = ceiling((max_ext - x_extent$ymin) / tile_size)
+tile_list = list()
+for(x in (x_min_tile:x_max_tile)[1:10]) {
+  for(y in (y_min_tile:y_max_tile)[1:10]) {
+    n_tiles = length(tile_list) + 1
+    u = glue::glue("https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/19/{x}/{y}.png")
+    # Check URL exists:
+    if(httr::http_error(u)) { next }
+    img_terra = terra::rast(u)
+    xmin <- -max_ext + (x * tile_size)
+    xmax <- -max_ext + ((x + 1) * tile_size)
+    ymax <- max_ext - (y * tile_size)
+    ymin <- max_ext - ((y + 1) * tile_size)
+    terra::ext(img_terra) <- c(xmin, xmax, ymin, ymax)
+    terra::crs(img_terra) <- "EPSG:3857"
+    # check with mapview: 
+    mapview::mapview(img_terra)
+    # Wait for 10 s to check:
+    Sys.sleep(1)
+    if (n_tiles == 1) {
+      img_final = img_terra
+    } else {
+      img_final = terra::merge(img_final, img_terra)
+    }
+  }
+}
+plot(tile_list[[1]])
+# Merge tiles
+tile_list_collection = terra::sprc(tile_list)
+leeds_tiles = terra::merge(tile_list_collection)
+plot(leeds_tiles)
+# transform to British National Grid
+leeds_tiles = terra::project(leeds_tiles, "EPSG:27700")
+# Save:
+terra::writeRaster(leeds_tiles, "leeds_townplan.tif", overwrite=TRUE)
+```
+
 The general pattern is: https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/{z}/{x}/{y}.png
 
 You can copy-paste that URL into QGIS 'XYZ Tiles' to access the tiles directly as shown below:
 
 ![](images/paste-1.png)
+
+<!-- You can download the tiles using R as follows: -->
+
+```{r}
+
+
+```
+
+```{r}
+#| eval: false
+# Note: failed
+library(maptiles)
+# Define the tile provider
+nls_provider <- create_provider(
+  name = "NLS_Town_Plans",
+  url = "https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/{z}/{x}/{y}.png",
+  citation = "National Library of Scotland"
+)
+central_leeds = leeds_boundary |>
+  st_transform(27700) 
+
+mapview::mapview(central_leeds)
+
+# Get tiles
+leeds_tiles <- get_tiles(
+  x = central_leeds, 
+  provider = nls_provider, 
+  zoom = 11,
+  crop = TRUE,
+  cachedir = "./tiles"
+)
+list.files("./tiles")
+# Plot tiles
+plot_tiles(leeds_tiles)
+```
+
+You can also use the `ceramic` package to download tiles:
+
+```{r}
+#| label: ceramic-tiles
+#| eval: false
+library(ceramic)
+
+# Get tiles for Leeds boundary
+# Note: This requires a Mapbox API key to be set in the environment variable MAPBOX_API_KEY
+# Sys.setenv(MAPBOX_API_KEY = "your_key_here")
+
+# cc_location automatically selects a zoom level based on the extent
+# We use the leeds_boundary object defined earlier
+leeds_tiles_ceramic <- cc_location(leeds_boundary)
+
+# Plot
+if(requireNamespace("terra", quietly = TRUE)) {
+  terra::plotRGB(leeds_tiles_ceramic)
+  plot(st_geometry(leeds_boundary), add = TRUE, border = "red")
+}
+
+tiles = read_tiles(
+  x = central_leeds,
+  base_url = "https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/",
+  zoom = 19
+)
+```
+
 
 ## Research
 
