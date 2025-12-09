@@ -2,21 +2,30 @@
 format: gfm
 ---
 
-
 ## Proprocessing
 
-- Download the town map dataset from Scottish Library: https://maps.nls.uk/os/townplans-england/leeds2.html
-- Digitise the tramway centerlines from there
-- Digitise the tram network from Alex's image data
-- Combine both datasets into a single tramway network
-- Bonus: track lines
-- Comparing with OSM
+### Plan
 
+-   Download the town map dataset from Scottish Library: https://maps.nls.uk/os/townplans-england/leeds2.html
+-   Digitise the tramway centerlines from there
+-   Digitise the tram network from Alex's image data
+-   Combine both datasets into a single tramway network
+-   Bonus: track lines
+-   Comparing with OSM
 
-Paper in Nature Scientific Data or similar?
+### Town plan data
 
+Individuals tiles can be accessed from URLs such as https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/19/259898/168840.png
+
+This is raster 'tile pyramids' - zoom level 19, tile coordinates 259898, 168840.
+
+The general pattern is: https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/{z}/{x}/{y}.png
+
+You can copy-paste that URL into QGIS 'XYZ Tiles' to access the tiles directly as shown below:
+
+![](images/paste-1.png)
 
 ## Research
 
-- Compare with historic economic and usage data
-- ...
+-   Compare with historic economic and usage data
+-   ...
