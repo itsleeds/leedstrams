@@ -67,46 +67,94 @@ terra::crs(img_terra) <- "EPSG:3857"
 terra::plotRGB(img_terra)
 mapview::mapview(img_terra)
 
-# Create a lapply to import all tiles in the Leeds area:
+# Define parameters
+z = 19
+max_ext = 20037508.34
+tile_size = (2 * max_ext) / (2^z)
+
+# Calculate tile ranges for Leeds
 x_extent = st_transform(leeds_boundary, 3857) |> st_bbox()
 x_min_tile = floor((x_extent$xmin + max_ext) / tile_size) 
 x_max_tile = ceiling((x_extent$xmax + max_ext) / tile_size)
 y_min_tile = floor((max_ext - x_extent$ymax) / tile_size)
 y_max_tile = ceiling((max_ext - x_extent$ymin) / tile_size)
-tile_list = list()
-for(x in (x_min_tile:x_max_tile)[1:10]) {
-  for(y in (y_min_tile:y_max_tile)[1:10]) {
-    n_tiles = length(tile_list) + 1
-    u = glue::glue("https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/19/{x}/{y}.png")
-    # Check URL exists:
-    if(httr::http_error(u)) { next }
-    img_terra = terra::rast(u)
+
+# Create directory
+dir.create("tiles", showWarnings = FALSE)
+
+# Bulk download loop
+# Create a grid of tile coordinates
+tile_grid = expand.grid(x = x_min_tile:x_max_tile, y = y_min_tile:y_max_tile)
+
+# Calculate center of the grid (approximate center of Leeds)
+x_center = mean(c(x_min_tile, x_max_tile))
+y_center = mean(c(y_min_tile, y_max_tile))
+
+# Calculate distance from center for each tile
+tile_grid$dist = sqrt((tile_grid$x - x_center)^2 + (tile_grid$y - y_center)^2)
+
+# Sort by distance (ascending) to start from the center and spiral out
+tile_grid = tile_grid[order(tile_grid$dist), ]
+
+# Iterate through sorted tiles
+for(i in 1:nrow(tile_grid)) {
+  x = tile_grid$x[i]
+  y = tile_grid$y[i]
+  
+  outfile = glue::glue("tiles/tile_{z}_{x}_{y}.png")
+  if (file.exists(outfile)) next
+  
+  u = glue::glue("https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/{z}/{x}/{y}.png")
+  
+  tryCatch({
+    # Use httr::GET for robust handling of HTTP errors (like 404)
+    resp <- httr::GET(u, httr::write_disk(outfile, overwrite = TRUE))
+    
+    if (httr::http_error(resp)) {
+      # If the URL returns an error (e.g. 404), remove the partial/error file
+      if (file.exists(outfile)) unlink(outfile)
+    } else {
+      Sys.sleep(0.5) # Be polite
+    }
+  }, error = function(e) {
+    message("Error skipping ", u, ": ", e$message)
+    if (file.exists(outfile)) unlink(outfile)
+  })
+}
+
+# Process downloaded tiles
+tile_files = list.files("tiles", pattern = glue::glue("tile_{z}_.*.png"), full.names = TRUE)
+
+if(length(tile_files) > 0) {
+  r_list = lapply(tile_files, function(f) {
+    # Parse filename to get x and y
+    parts = strsplit(basename(f), "_")[[1]]
+    x = as.numeric(parts[3])
+    y = as.numeric(gsub(".png", "", parts[4]))
+    
+    r = terra::rast(f)
+    
+    # Set extent
     xmin <- -max_ext + (x * tile_size)
     xmax <- -max_ext + ((x + 1) * tile_size)
     ymax <- max_ext - (y * tile_size)
     ymin <- max_ext - ((y + 1) * tile_size)
-    terra::ext(img_terra) <- c(xmin, xmax, ymin, ymax)
-    terra::crs(img_terra) <- "EPSG:3857"
-    # check with mapview: 
-    mapview::mapview(img_terra)
-    # Wait for 10 s to check:
-    Sys.sleep(1)
-    if (n_tiles == 1) {
-      img_final = img_terra
-    } else {
-      img_final = terra::merge(img_final, img_terra)
-    }
-  }
+    
+    terra::ext(r) <- c(xmin, xmax, ymin, ymax)
+    terra::crs(r) <- "EPSG:3857"
+    return(r)
+  })
+  
+  # Merge
+  tile_collection = terra::sprc(r_list)
+  leeds_tiles = terra::merge(tile_collection)
+  
+  # Reproject and save
+  leeds_tiles_bn = terra::project(leeds_tiles, "EPSG:27700")
+  terra::writeRaster(leeds_tiles_bn, "leeds_townplan.tif", overwrite=TRUE)
+  
+  terra::plotRGB(leeds_tiles_bn)
 }
-plot(tile_list[[1]])
-# Merge tiles
-tile_list_collection = terra::sprc(tile_list)
-leeds_tiles = terra::merge(tile_list_collection)
-plot(leeds_tiles)
-# transform to British National Grid
-leeds_tiles = terra::project(leeds_tiles, "EPSG:27700")
-# Save:
-terra::writeRaster(leeds_tiles, "leeds_townplan.tif", overwrite=TRUE)
 ```
 
 The general pattern is: https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/{z}/{x}/{y}.png
