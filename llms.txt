@@ -43,6 +43,13 @@ chunked merging), see the standalone script:
 That script caches downloaded tiles under `.cache/` and writes
 `tiles_merged_leeds.tif` (these outputs are gitignored).
 
+You can download a [100MB file with all of the tiles in a 1km radius of
+central Leeds from the releases of this
+repo](https://github.com/itsleeds/leedstrams/releases/tag/v1) and open
+up in QGIS or similar as shown below:
+
+![](images/paste-3.png)
+
 ## Documentation
 
 - User vignette: `vignettes/nls-tiles.Rmd`
