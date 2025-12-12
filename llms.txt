@@ -1,0 +1,128 @@
+# `leedstrams`
+
+This repository is an R package that provides helpers for working with
+the National Library of Scotland (NLS) OS town-plan *XYZ tile pyramids*,
+used for the Leeds tram mapping case study.
+
+## Install
+
+## Core package functions
+
+Tile maths:
+
+- [`tile_coords_to_xy()`](https://itsleeds.github.io/leedstrams/reference/tile_coords_to_xy.md)
+  (lon/lat -\> x/y)
+- [`tile_xy_to_lonlat()`](https://itsleeds.github.io/leedstrams/reference/tile_xy_to_lonlat.md)
+  (x/y -\> lon/lat)
+- [`tile_webmerc_extent()`](https://itsleeds.github.io/leedstrams/reference/tile_webmerc_extent.md)
+  (tile -\> EPSG:3857 extent)
+
+NLS tile access:
+
+- [`nls_tile_rast_zxy()`](https://itsleeds.github.io/leedstrams/reference/nls_tile_rast_zxy.md)
+  (read a z/x/y tile into a georeferenced `terra` raster)
+- [`nls_tile_rast_lonlat()`](https://itsleeds.github.io/leedstrams/reference/nls_tile_rast_lonlat.md)
+  (read the tile containing a lon/lat)
+
+Tile selection:
+
+- [`nls_tiles_near_lonlat()`](https://itsleeds.github.io/leedstrams/reference/nls_tiles_near_lonlat.md)
+  (compact set of nearby tiles, useful for small mosaics)
+- [`nls_tiles_for_polygon()`](https://itsleeds.github.io/leedstrams/reference/nls_tiles_for_polygon.md)
+  (tile indices intersecting an `sf` polygon)
+
+## Example: small mosaic near Hyde Park
+
+## Downloading/stitching a larger Leeds mosaic
+
+For a reproducible end-to-end download/stitch workflow (including
+chunked merging), see the standalone script:
+
+- `scripts/download_leeds_nls_tiles.R`
+
+That script caches downloaded tiles under `.cache/` and writes
+`tiles_merged_leeds.tif` (these outputs are gitignored).
+
+## Documentation
+
+- User vignette: `vignettes/nls-tiles.Rmd`
+- pkgdown site: <https://itsleeds.github.io/leedstrams/>
+- Developer-only one-off checks: `dev/tests.Rmd`
+
+## Notes
+
+Keep remote tile downloads limited when rendering documentation, and
+prefer running larger downloads via the script above.
+
+### Plan
+
+- Download the town map dataset from Scottish Library:
+  <https://maps.nls.uk/os/townplans-england/leeds2.html>
+- Digitise the tramway centerlines from there
+- Digitise the tram network from Alex’s image data
+- Combine both datasets into a single tramway network
+- Bonus: track lines
+- Comparing with OSM
+
+### Rail Map online data
+
+![](images/paste-2.png)
+
+See png-to-geojson.py
+
+### Town plan data
+
+Individual tiles can be accessed from URLs such as
+`https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/19/259898/168840.png`.
+
+This is a raster tile pyramid: zoom level 19, tile coordinates 259898,
+168840.
+
+The general pattern is:
+`https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/{z}/{x}/{y}.png`
+
+You can copy-paste that URL into QGIS ‘XYZ Tiles’ to access the tiles
+directly as shown below:
+
+![](images/paste-1.png)
+
+You can also use the `ceramic` package to download tiles:
+
+### Extracting tram network from image
+
+The following Python code processes the image `images/paste-2.png` to
+extract the Leeds tram network lines (purple), skeletonizes them, and
+converts the result to LineStrings.
+
+## Research
+
+- Compare with historic economic and usage data
+- …
+
+# Package index
+
+## All functions
+
+- [`nls_download_tile_png()`](https://itsleeds.github.io/leedstrams/reference/nls_download_tile_png.md)
+  : Download a single NLS town-plan PNG tile
+- [`nls_tile_rast_lonlat()`](https://itsleeds.github.io/leedstrams/reference/nls_tile_rast_lonlat.md)
+  : Read an NLS tile by lon/lat
+- [`nls_tile_rast_zxy()`](https://itsleeds.github.io/leedstrams/reference/nls_tile_rast_zxy.md)
+  : Read an NLS tile into a georeferenced terra raster
+- [`nls_tiles_for_polygon()`](https://itsleeds.github.io/leedstrams/reference/nls_tiles_for_polygon.md)
+  : Tiles intersecting a polygon at a given zoom
+- [`nls_tiles_near_lonlat()`](https://itsleeds.github.io/leedstrams/reference/nls_tiles_near_lonlat.md)
+  : Tile coordinate set near a lon/lat
+- [`tile_coords_to_xy()`](https://itsleeds.github.io/leedstrams/reference/tile_coords_to_xy.md)
+  : Convert lon/lat to XYZ or TMS tile coordinates
+- [`tile_webmerc_extent()`](https://itsleeds.github.io/leedstrams/reference/tile_webmerc_extent.md)
+  : Web Mercator extent of an XYZ tile
+- [`tile_xy_to_lonlat()`](https://itsleeds.github.io/leedstrams/reference/tile_xy_to_lonlat.md)
+  : Convert XYZ/TMS tile coordinates to lon/lat
+
+# Articles
+
+### All vignettes
+
+- [NLS town-plan
+  tiles](https://itsleeds.github.io/leedstrams/articles/nls-tiles.md):

@@ -1,0 +1,9 @@
+pandoc: 3.1.11
+pkgdown: 2.2.0
+pkgdown_sha: ~
+articles:
+  nls-tiles: nls-tiles.html
+last_built: 2025-12-12T10:32Z
+urls:
+  reference: https://itsleeds.github.io/leedstrams/reference
+  article: https://itsleeds.github.io/leedstrams/articles
