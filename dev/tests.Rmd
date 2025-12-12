@@ -1,0 +1,38 @@
+---
+title: "Developer checks (one-off)"
+output: gfm
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+These are lightweight, *developer-only* checks used while building the tile
+helpers. This file is not part of the package vignettes.
+
+```{r}
+library(leedstrams)
+```
+
+## XYZ tile maths round-trip
+
+```{r}
+expected_x <- 519739
+expected_y <- 337593
+center <- tile_xy_to_lonlat(expected_x, expected_y, z = 20, scheme = "xyz", offset = 0.5)
+stopifnot(all(tile_coords_to_xy(center["lon"], center["lat"], z = 20) == c(x = expected_x, y = expected_y)))
+```
+
+## Optional: small tile read (network)
+
+This hits the network; keep `eval = FALSE` by default.
+
+```{r, eval = FALSE}
+base_url <- "https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North"
+z <- 19
+x <- 259898
+y <- 168840
+r <- nls_tile_rast_zxy(base_url = base_url, z = z, x = x, y = y)
+terra::plotRGB(r)
+```
+

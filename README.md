@@ -1,21 +1,55 @@
 
 
-## Preprocessing
+# `leedstrams`
 
-    Linking to GEOS 3.12.1, GDAL 3.8.4, PROJ 9.4.0; sf_use_s2() is TRUE
+This repository is an R package that provides helpers for working with
+the National Library of Scotland (NLS) OS town-plan *XYZ tile pyramids*,
+used for the Leeds tram mapping case study.
 
-    terra 1.8.80
+## Install
 
+## Core package functions
 
-    Attaching package: 'glue'
+Tile maths:
 
-    The following object is masked from 'package:terra':
+- `tile_coords_to_xy()` (lon/lat -\> x/y)
+- `tile_xy_to_lonlat()` (x/y -\> lon/lat)
+- `tile_webmerc_extent()` (tile -\> EPSG:3857 extent)
 
-        trim
+NLS tile access:
 
-    Loading required namespace: tmaptools
+- `nls_tile_rast_zxy()` (read a z/x/y tile into a georeferenced `terra`
+  raster)
+- `nls_tile_rast_lonlat()` (read the tile containing a lon/lat)
 
-    Please set segment_center = TRUE to divide the centre into multiple segments
+Tile selection:
+
+- `nls_tiles_near_lonlat()` (compact set of nearby tiles, useful for
+  small mosaics)
+- `nls_tiles_for_polygon()` (tile indices intersecting an `sf` polygon)
+
+## Example: small mosaic near Hyde Park
+
+## Downloading/stitching a larger Leeds mosaic
+
+For a reproducible end-to-end download/stitch workflow (including
+chunked merging), see the standalone script:
+
+- `scripts/download_leeds_nls_tiles.R`
+
+That script caches downloaded tiles under `.cache/` and writes
+`tiles_merged_leeds.tif` (these outputs are gitignored).
+
+## Documentation
+
+- User vignette: `vignettes/nls-tiles.Rmd`
+- pkgdown site: https://itsleeds.github.io/leedstrams/
+- Developer-only one-off checks: `dev/tests.Rmd`
+
+## Notes
+
+Keep remote tile downloads limited when rendering documentation, and
+prefer running larger downloads via the script above.
 
 ### Plan
 
@@ -35,32 +69,14 @@ See png-to-geojson.py
 
 ### Town plan data
 
-Individuals tiles can be accessed from URLs such as
-https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/19/259898/168840.png
+Individual tiles can be accessed from URLs such as
+`https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/19/259898/168840.png`.
 
-This is raster ‘tile pyramids’ - zoom level 19, tile coordinates 259898,
+This is a raster tile pyramid: zoom level 19, tile coordinates 259898,
 168840.
 
-<!-- We can import this image (single tile): -->
-
-We can put that logic into a small set of helpers:
-
-- Convert lon/lat to XYZ tile coords (and back)
-- Download a tile and set its Web Mercator extent
-- Convert NLS paletted PNG tiles to RGB so plotting works
-
-# Download a small mosaic near Hyde Park (cheap: \<= 10 tiles)
-
-           x      y
-    1 519738 337593
-    2 519739 337593
-    3 519738 337594
-    4 519739 337594
-
-![](README_files/figure-commonmark/hyde-park-mosaic-1.png)
-
 The general pattern is:
-https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/{z}/{x}/{y}.png
+`https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/{z}/{x}/{y}.png`
 
 You can copy-paste that URL into QGIS ‘XYZ Tiles’ to access the tiles
 directly as shown below:

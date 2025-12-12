@@ -15,3 +15,8 @@
 ^png-to-geojson\.py$
 ^images/.*$
 ^README\.qmd$
+^dev/.*$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^\.github$

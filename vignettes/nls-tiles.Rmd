@@ -26,16 +26,8 @@ The NLS town plan rasters are served as Web Mercator *XYZ tiles* at URLs like:
 
 The helpers in this package implement the standard XYZ tile maths.
 
-### Deterministic sanity check
-
-This is the round-trip check that previously lived in `README.qmd`.
-
-```{r}
-expected_x <- 519739
-expected_y <- 337593
-center <- tile_xy_to_lonlat(expected_x, expected_y, z = 20, scheme = "xyz", offset = 0.5)
-stopifnot(all(tile_coords_to_xy(center["lon"], center["lat"], z = 20) == c(x = expected_x, y = expected_y)))
-```
+Developer-only, one-off checks (including a deterministic XYZ round-trip) live
+in `dev/tests.Rmd`.
 
 ## Getting tiles near a point
 
