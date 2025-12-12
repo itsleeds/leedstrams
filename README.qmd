@@ -6,9 +6,7 @@ execute:
 
 # `leedstrams`
 
-This repository is an R package that provides helpers for working with the
-National Library of Scotland (NLS) OS town-plan *XYZ tile pyramids*, used for
-the Leeds tram mapping case study.
+This repository is an R package that provides helpers for working with the National Library of Scotland (NLS) OS town-plan *XYZ tile pyramids*, used for the Leeds tram mapping case study.
 
 ## Install
 
@@ -22,19 +20,19 @@ remotes::install_github("itsleeds/leedstrams")
 
 Tile maths:
 
-- `tile_coords_to_xy()` (lon/lat -> x/y)
-- `tile_xy_to_lonlat()` (x/y -> lon/lat)
-- `tile_webmerc_extent()` (tile -> EPSG:3857 extent)
+-   `tile_coords_to_xy()` (lon/lat -\> x/y)
+-   `tile_xy_to_lonlat()` (x/y -\> lon/lat)
+-   `tile_webmerc_extent()` (tile -\> EPSG:3857 extent)
 
 NLS tile access:
 
-- `nls_tile_rast_zxy()` (read a z/x/y tile into a georeferenced `terra` raster)
-- `nls_tile_rast_lonlat()` (read the tile containing a lon/lat)
+-   `nls_tile_rast_zxy()` (read a z/x/y tile into a georeferenced `terra` raster)
+-   `nls_tile_rast_lonlat()` (read the tile containing a lon/lat)
 
 Tile selection:
 
-- `nls_tiles_near_lonlat()` (compact set of nearby tiles, useful for small mosaics)
-- `nls_tiles_for_polygon()` (tile indices intersecting an `sf` polygon)
+-   `nls_tiles_near_lonlat()` (compact set of nearby tiles, useful for small mosaics)
+-   `nls_tiles_for_polygon()` (tile indices intersecting an `sf` polygon)
 
 ## Example: small mosaic near Hyde Park
 
@@ -59,24 +57,25 @@ terra::plotRGB(mosaic)
 
 ## Downloading/stitching a larger Leeds mosaic
 
-For a reproducible end-to-end download/stitch workflow (including chunked
-merging), see the standalone script:
+For a reproducible end-to-end download/stitch workflow (including chunked merging), see the standalone script:
 
-- `scripts/download_leeds_nls_tiles.R`
+-   `scripts/download_leeds_nls_tiles.R`
 
-That script caches downloaded tiles under `.cache/` and writes
-`tiles_merged_leeds.tif` (these outputs are gitignored).
+That script caches downloaded tiles under `.cache/` and writes `tiles_merged_leeds.tif` (these outputs are gitignored).
+
+You can download a [100MB file with all of the tiles in a 1km radius of central Leeds from the releases of this repo](https://github.com/itsleeds/leedstrams/releases/tag/v1) and open up in QGIS or similar as shown below:
+
+![](images/paste-3.png)
 
 ## Documentation
 
-- User vignette: `vignettes/nls-tiles.Rmd`
-- pkgdown site: https://itsleeds.github.io/leedstrams/
-- Developer-only one-off checks: `dev/tests.Rmd`
+-   User vignette: `vignettes/nls-tiles.Rmd`
+-   pkgdown site: https://itsleeds.github.io/leedstrams/
+-   Developer-only one-off checks: `dev/tests.Rmd`
 
 ## Notes
 
-Keep remote tile downloads limited when rendering documentation, and prefer
-running larger downloads via the script above.
+Keep remote tile downloads limited when rendering documentation, and prefer running larger downloads via the script above.
 
 ### Plan
 
@@ -95,13 +94,11 @@ See png-to-geojson.py
 
 ### Town plan data
 
-Individual tiles can be accessed from URLs such as
-`https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/19/259898/168840.png`.
+Individual tiles can be accessed from URLs such as `https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/19/259898/168840.png`.
 
 This is a raster tile pyramid: zoom level 19, tile coordinates 259898, 168840.
 
-The general pattern is:
-`https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/{z}/{x}/{y}.png`
+The general pattern is: `https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/{z}/{x}/{y}.png`
 
 You can copy-paste that URL into QGIS 'XYZ Tiles' to access the tiles directly as shown below:
 
