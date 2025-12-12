@@ -1,7 +1,7 @@
 # Download and stitch NLS (National Library of Scotland) OS town plan tiles for Leeds.
 #
-# This script is intentionally standalone (no package dependency) and mirrors the
-# logic in `README.qmd`.
+# This script now primarily uses functions from the local `leedstrams` package
+# (loaded with devtools::load_all()).
 #
 # Usage:
 #   Rscript scripts/download_leeds_nls_tiles.R
@@ -11,6 +11,15 @@ suppressPackageStartupMessages({
   library(terra)
   library(glue)
 })
+
+# Prefer the *local* package code (no install step). Fall back to library().
+if (requireNamespace("devtools", quietly = TRUE)) {
+  devtools::load_all(quiet = TRUE)
+} else if (requireNamespace("leedstrams", quietly = TRUE)) {
+  library(leedstrams)
+} else {
+  stop("Need either 'devtools' (preferred) or an installed 'leedstrams' package.")
+}
 
 # ---- Configuration (edit and re-run) -----------------------------------------
 
@@ -27,59 +36,9 @@ z <- 19L
 # Output (GeoTIFF) and on-disk caches (NOT committed)
 cache_dir_png <- file.path(".cache", "nls_tiles_png")
 cache_dir_chunks <- file.path(".cache", "nls_tiles_chunks")
-out_tif <- "tiles_merged_leeds.tif"
+out_tif <- "tiles_merged_leeds_all.tif"
 
-# ---- Helpers (ported from README.qmd) ----------------------------------------
-
-tile_coords_to_xy <- function(lon, lat, z, scheme = c("xyz", "tms")) {
-  scheme <- match.arg(scheme)
-  stopifnot(is.finite(lon), is.finite(lat), is.finite(z))
-
-  n <- 2^z
-
-  # Web Mercator latitude limit (prevents Inf from tan/log near the poles)
-  lat <- max(min(lat, 85.05112878), -85.05112878)
-  lat_rad <- lat * pi / 180
-
-  x_tile <- floor((lon + 180) / 360 * n)
-  y_tile <- floor((1 - log(tan(lat_rad) + 1 / cos(lat_rad)) / pi) / 2 * n)
-
-  # Clamp to valid range [0, n - 1]
-  x_tile <- max(min(x_tile, n - 1), 0)
-  y_tile <- max(min(y_tile, n - 1), 0)
-
-  if (scheme == "tms") {
-    y_tile <- (n - 1) - y_tile
-  }
-
-  c(x = x_tile, y = y_tile)
-}
-
-tile_xy_to_lonlat <- function(x, y, z, scheme = c("xyz", "tms"), offset = 0.5) {
-  scheme <- match.arg(scheme)
-  stopifnot(is.finite(x), is.finite(y), is.finite(z), is.finite(offset))
-
-  n <- 2^z
-  if (scheme == "tms") y <- (n - 1) - y
-
-  lon <- ((x + offset) / n) * 360 - 180
-  lat_rad <- atan(sinh(pi * (1 - 2 * (y + offset) / n)))
-  lat <- lat_rad * 180 / pi
-
-  c(lon = lon, lat = lat)
-}
-
-tile_webmerc_extent <- function(z, x, y) {
-  max_ext <- 20037508.34
-  tile_size <- (2 * max_ext) / (2^z)
-
-  xmin <- -max_ext + (x * tile_size)
-  xmax <- -max_ext + ((x + 1) * tile_size)
-  ymax <- max_ext - (y * tile_size)
-  ymin <- max_ext - ((y + 1) * tile_size)
-
-  terra::ext(xmin, xmax, ymin, ymax)
-}
+# ---- Script-local helpers -----------------------------------------------------
 
 tile_rast_from_png <- function(png_file, z, x, y) {
   r <- suppressWarnings(terra::rast(png_file))
@@ -98,81 +57,9 @@ tile_rast_from_png <- function(png_file, z, x, y) {
   # Web tiles are stored with a top-left origin; flip so north is up.
   r <- terra::flip(r, direction = "vertical")
 
-  terra::ext(r) <- tile_webmerc_extent(z = z, x = x, y = y)
+  terra::ext(r) <- leedstrams::tile_webmerc_extent(z = z, x = x, y = y)
   terra::crs(r) <- "EPSG:3857"
   r
-}
-
-tile_png_url <- function(base_url, z, x, y) {
-  glue("{base_url}/{z}/{x}/{y}.png")
-}
-
-download_tile_png <- function(url, destfile) {
-  dir.create(dirname(destfile), recursive = TRUE, showWarnings = FALSE)
-
-  if (file.exists(destfile) && file.info(destfile)$size > 0) {
-    return(invisible(TRUE))
-  }
-
-  ok <- FALSE
-  try({
-    # Use httr if available (nice HTTP status handling); fall back to base R.
-    if (requireNamespace("httr", quietly = TRUE)) {
-      resp <- httr::GET(url, httr::write_disk(destfile, overwrite = TRUE))
-      ok <- !httr::http_error(resp)
-    } else {
-      utils::download.file(url, destfile, mode = "wb", quiet = TRUE)
-      ok <- file.exists(destfile) && file.info(destfile)$size > 0
-    }
-  }, silent = TRUE)
-
-  if (!ok) {
-    if (file.exists(destfile)) unlink(destfile)
-  }
-
-  invisible(ok)
-}
-
-tiles_for_polygon <- function(poly, z) {
-  stopifnot(inherits(poly, "sf") || inherits(poly, "sfc"))
-
-  poly_3857 <- sf::st_transform(poly, 3857)
-  bb <- sf::st_bbox(poly_3857)
-
-  max_ext <- 20037508.34
-  tile_size <- (2 * max_ext) / (2^z)
-
-  x_min <- floor((bb["xmin"] + max_ext) / tile_size)
-  x_max <- ceiling((bb["xmax"] + max_ext) / tile_size)
-  y_min <- floor((max_ext - bb["ymax"]) / tile_size)
-  y_max <- ceiling((max_ext - bb["ymin"]) / tile_size)
-
-  grid <- expand.grid(
-    x = seq.int(x_min, x_max),
-    y = seq.int(y_min, y_max)
-  )
-
-  # Filter to tiles whose WebMercator footprint intersects the polygon.
-  # (This keeps tile count down vs bbox-only.)
-  tile_polys <- lapply(seq_len(nrow(grid)), function(i) {
-    e <- tile_webmerc_extent(z = z, x = grid$x[i], y = grid$y[i])
-    sf::st_polygon(list(
-      matrix(
-        c(
-          e$xmin, e$ymin,
-          e$xmin, e$ymax,
-          e$xmax, e$ymax,
-          e$xmax, e$ymin,
-          e$xmin, e$ymin
-        ),
-        ncol = 2,
-        byrow = TRUE
-      )
-    ))
-  })
-  sfc <- sf::st_sfc(tile_polys, crs = 3857)
-  keep <- sf::st_intersects(sfc, sf::st_geometry(poly_3857), sparse = FALSE)[, 1]
-  grid[keep, , drop = FALSE]
 }
 
 order_tiles_by_center_distance <- function(tiles) {
@@ -266,22 +153,25 @@ merge_tiles_in_chunks <- function(tile_table, z, cache_dir_png, cache_dir_chunks
 
 leeds_boundary <- NULL
 if (requireNamespace("zonebuilder", quietly = TRUE)) {
-  leeds_boundary <- zonebuilder::zb_zone("Leeds", n_circles = 1)
+  leeds_boundary <- zonebuilder::zb_zone("Leeds", n_circles = 5)
 }
 if (is.null(leeds_boundary)) {
   stop("Could not create Leeds boundary (missing package 'zonebuilder').")
 }
 
+# Ensure we have a single polygon geometry
+leeds_boundary <- sf::st_union(leeds_boundary)
+
 # ---- Main --------------------------------------------------------------------
 
-# Deterministic sanity check (ported from README.qmd)
+# Deterministic sanity check
 expected_x <- 519739
 expected_y <- 337593
-center <- tile_xy_to_lonlat(expected_x, expected_y, z = 20, scheme = "xyz", offset = 0.5)
-stopifnot(all(tile_coords_to_xy(center["lon"], center["lat"], z = 20) == c(x = expected_x, y = expected_y)))
+center <- leedstrams::tile_xy_to_lonlat(expected_x, expected_y, z = 20, scheme = "xyz", offset = 0.5)
+stopifnot(all(leedstrams::tile_coords_to_xy(center["lon"], center["lat"], z = 20) == c(x = expected_x, y = expected_y)))
 
 message(glue("Computing tiles for Leeds boundary at z={z} ..."))
-tiles_all <- tiles_for_polygon(leeds_boundary, z = z)
+tiles_all <- leedstrams::nls_tiles_for_polygon(leeds_boundary, z = z)
 tiles_all <- order_tiles_by_center_distance(tiles_all)
 
 message(glue("Total tiles intersecting Leeds boundary at z={z}: {nrow(tiles_all)}"))
@@ -296,14 +186,21 @@ failed <- 0L
 for (i in seq_len(nrow(tiles_use))) {
   x <- tiles_use$x[i]
   y <- tiles_use$y[i]
-  url <- tile_png_url(base_url = base_url, z = z, x = x, y = y)
   png_file <- file.path(cache_dir_png, glue("z{z}"), glue("x{x}"), glue("y{y}.png"))
-  ok <- download_tile_png(url = url, destfile = png_file)
+
+  # Robust download: continue through missing (404) tiles.
+  ok <- leedstrams::nls_download_tile_png(
+    base_url = base_url,
+    z = z,
+    x = x,
+    y = y,
+    destfile = png_file
+  )
   if (ok) {
     downloaded <- downloaded + 1L
   } else {
     failed <- failed + 1L
-    message(glue("FAILED: {url}"))
+    message(glue("FAILED: z={z} x={x} y={y}"))
   }
   if (i %% 50L == 0L) {
     message(glue("Progress: {i}/{nrow(tiles_use)} (downloaded={downloaded}, failed={failed})"))

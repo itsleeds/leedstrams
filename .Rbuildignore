@@ -9,7 +9,7 @@
 ^\.\.Rcheck$
 ^\.\.Rcheck/.*$
 ^vignettes/\.gitignore$
-^tiles_merged_leeds\.tif$
+^tiles_merged_.*\.tif$
 ^leeds_townplan_test\.tif$
 ^leeds_townplan\.tif$
 ^png-to-geojson\.py$

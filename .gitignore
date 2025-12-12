@@ -4,8 +4,8 @@ inst/doc
 *.Rcheck/
 leedstrams.Rcheck/
 ..Rcheck/
-tiles_merged_leeds.tif
-tiles_merged_leeds.tif.aux.xml
+tiles_merged_*.tif
+tiles_merged_*.tif.aux.xml
 *.tif.aux.xml
 *.aux.xml
 leeds_townplan_test.tif
