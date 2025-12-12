@@ -1,0 +1,67 @@
+---
+title: "NLS town-plan tiles"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{NLS town-plan tiles}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(leedstrams)
+```
+
+## Tile maths
+
+The NLS town plan rasters are served as Web Mercator *XYZ tiles* at URLs like:
+
+`https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North/{z}/{x}/{y}.png`
+
+The helpers in this package implement the standard XYZ tile maths.
+
+### Deterministic sanity check
+
+This is the round-trip check that previously lived in `README.qmd`.
+
+```{r}
+expected_x <- 519739
+expected_y <- 337593
+center <- tile_xy_to_lonlat(expected_x, expected_y, z = 20, scheme = "xyz", offset = 0.5)
+stopifnot(all(tile_coords_to_xy(center["lon"], center["lat"], z = 20) == c(x = expected_x, y = expected_y)))
+```
+
+## Getting tiles near a point
+
+```{r}
+z <- 20
+hyde_park <- c(lon = -1.561482, lat = 53.814711)
+tiles <- nls_tiles_near_lonlat(hyde_park["lon"], hyde_park["lat"], z = z, n_tiles = 4)
+tiles
+```
+
+## Downloading and stitching tiles
+
+Remote tile downloads are intentionally disabled in this vignette so it remains
+cheap to build during `R CMD check`.
+
+To try a small mosaic interactively, flip `eval = FALSE` to `eval = TRUE`.
+
+```{r, eval = FALSE}
+base_url <- "https://mapseries-tilesets.s3.amazonaws.com/os/town-england/North"
+
+r_list <- Map(
+  function(x, y) nls_tile_rast_zxy(base_url = base_url, z = z, x = x, y = y),
+  tiles$x,
+  tiles$y
+)
+
+mosaic <- terra::merge(terra::sprc(r_list))
+terra::plotRGB(mosaic)
+```

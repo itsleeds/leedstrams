@@ -1,0 +1,25 @@
+Package: leedstrams
+Title: Tools for Working with Leeds Historic Tram Map Tiles
+Version: 0.0.0.9000
+Authors@R: c(
+    person("ITS", "Leeds", role = c("cph")),
+    person("Robin", "Lovelace", role = c("aut", "cre"), email = "robin@example.com")
+  )
+Author: ITS Leeds [cph], Robin Lovelace [aut, cre]
+Maintainer: Robin Lovelace <robin@example.com>
+Description: Helper functions to work with National Library of Scotland (NLS)
+    OS town plan tile pyramids, including XYZ tile maths, downloading, and
+    creating stitched mosaics with 'terra'.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Imports:
+    glue,
+    sf,
+    terra
+Suggests: 
+    httr,
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr

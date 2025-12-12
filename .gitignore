@@ -1,0 +1,15 @@
+inst/doc
+.cache/
+*.tar.gz
+*.Rcheck/
+leedstrams.Rcheck/
+..Rcheck/
+tiles_merged_leeds.tif
+tiles_merged_leeds.tif.aux.xml
+*.tif.aux.xml
+*.aux.xml
+leeds_townplan_test.tif
+leeds_townplan.tif
+.Rhistory
+.Rproj.user/
+*.Rproj

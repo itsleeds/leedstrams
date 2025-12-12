@@ -1,0 +1,17 @@
+^\.cache$
+^\.git$
+^\.gitignore$
+^\.devcontainer$
+^\.Rbuildignore$
+^\.Rhistory$
+^\.Rproj\.user$
+^\.Rproj\.user/.*$
+^\.\.Rcheck$
+^\.\.Rcheck/.*$
+^vignettes/\.gitignore$
+^tiles_merged_leeds\.tif$
+^leeds_townplan_test\.tif$
+^leeds_townplan\.tif$
+^png-to-geojson\.py$
+^images/.*$
+^README\.qmd$
